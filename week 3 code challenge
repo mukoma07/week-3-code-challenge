@@ -1,0 +1,77 @@
+const filmList = document.getElementById("films");
+
+getFilms();
+
+function getFilms() {
+  fetch('http://localhost:3000/films')
+    .then(response => response.json())
+    .then(showFilmList)
+    .catch(error => console.log('Error fetching movie list:', error));
+}
+
+function showFilmList(films) {
+  films.forEach(film => {
+    const li = document.createElement("li");
+    li.addEventListener('click', function () {
+      li.style.cursor = 'pointer';
+      showFilmDetails(film);
+    });
+    li.innerText = film.title;
+    filmList.appendChild(li);
+  });
+}
+
+function showFilmDetails(film) {
+  const filmTitle = document.getElementById("title");
+  const poster = document.getElementById("poster");
+  const movieDuration = document.getElementById("runtime");
+  const movieOutline = document.getElementById("film-info");
+  const moviePlayTime = document.getElementById("showtime");
+  const ticket = document.getElementById("ticket-num");
+  const button = document.getElementById("buy-ticket");
+
+  filmTitle.innerText = film.title;
+  poster.src = film.poster;
+  movieDuration.innerText = film.runtime + ' Minutes';
+  movieOutline.innerText = film.description;
+  moviePlayTime.innerText = film.showtime;
+  ticket.innerText = film.capacity - film.tickets_sold;
+
+  if (film.capacity - film.tickets_sold > 0) {
+    button.disabled = false;
+  } else {
+    button.disabled = true;
+  }
+
+  button.removeEventListener('click', handleTickets);
+  button.addEventListener('click', () => handleTickets(film));
+}
+
+function handleTickets(film) {
+  const button = document.getElementById("buy-ticket");
+  const ticket = document.getElementById("ticket-num");
+
+  if (film.tickets_sold < film.capacity) {
+    fetch(`http://localhost:3000/films/${film.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        tickets_sold: film.tickets_sold + 1
+      })
+    })
+      .then(response => response.json())
+      .then(updatedFilm => {
+        film.tickets_sold = updatedFilm.tickets_sold;
+        ticket.innerText = film.capacity - film.tickets_sold;
+
+        if (film.tickets_sold === film.capacity) {
+          button.disabled = true;
+          button.innerText = "Tickets Sold Out!";
+        }
+      })
+      .catch(error => console.log('Error updating ticket:', error));
+  }
+}
